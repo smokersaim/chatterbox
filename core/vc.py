@@ -39,7 +39,6 @@ class ChatterboxVC:
     def from_local(cls, ckpt_dir, device) -> 'ChatterboxVC':
         ckpt_dir = Path(ckpt_dir)
         
-        # Always load to CPU first for non-CUDA devices to handle CUDA-saved models
         if device in ["cpu", "mps"]:
             map_location = torch.device('cpu')
         else:
@@ -60,7 +59,6 @@ class ChatterboxVC:
 
     @classmethod
     def from_pretrained(cls, device) -> 'ChatterboxVC':
-        # Check if MPS is available on macOS
         if device == "mps" and not torch.backends.mps.is_available():
             if not torch.backends.mps.is_built():
                 print("MPS not available because the current PyTorch install was not built with MPS enabled.")
@@ -74,9 +72,7 @@ class ChatterboxVC:
         return cls.from_local(Path(local_path).parent, device)
 
     def set_target_voice(self, wav_fpath):
-        ## Load reference wav
         s3gen_ref_wav, _sr = librosa.load(wav_fpath, sr=S3GEN_SR)
-
         s3gen_ref_wav = s3gen_ref_wav[:self.DEC_COND_LEN]
         self.ref_dict = self.s3gen.embed_ref(s3gen_ref_wav, S3GEN_SR, device=self.device)
 

@@ -1,17 +1,11 @@
-import logging
-
 import torch
 from tokenizers import Tokenizer
 
-
-# Special tokens
 SOT = "[START]"
 EOT = "[STOP]"
 UNK = "[UNK]"
 SPACE = "[SPACE]"
 SPECIAL_TOKENS = [SOT, EOT, UNK, SPACE, "[PAD]", "[SEP]", "[CLS]", "[MASK]"]
-
-logger = logging.getLogger(__name__)
 
 class EnTokenizer:
     def __init__(self, vocab_file_path):

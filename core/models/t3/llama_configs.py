@@ -1,8 +1,5 @@
 LLAMA_520M_CONFIG_DICT = dict(
-    # Arbitrary small number that won't cause problems when loading.
-    # These param are unused due to custom input layers.
     vocab_size=8,
-    # default params needed for loading most pretrained 1B weights
     max_position_embeddings=131072,
     hidden_size=1024,
     intermediate_size=4096,

@@ -20,21 +20,14 @@ REPO_ID = "ResembleAI/chatterbox"
 
 
 def punc_norm(text: str) -> str:
-    """
-        Quick cleanup func for punctuation from LLMs or
-        containing chars not seen often in the dataset
-    """
     if len(text) == 0:
         return "You need to add some text for me to talk."
 
-    # Capitalise first letter
     if text[0].islower():
         text = text[0].upper() + text[1:]
 
-    # Remove multiple space chars
     text = " ".join(text.split())
 
-    # Replace uncommon/llm punc
     punc_to_replace = [
         ("...", ", "),
         ("…", ", "),
@@ -52,7 +45,6 @@ def punc_norm(text: str) -> str:
     for old_char_sequence, new_char in punc_to_replace:
         text = text.replace(old_char_sequence, new_char)
 
-    # Add full stop if no ending punc
     text = text.rstrip(" ")
     sentence_enders = {".", "!", "?", "-", ","}
     if not any(text.endswith(p) for p in sentence_enders):
@@ -63,21 +55,6 @@ def punc_norm(text: str) -> str:
 
 @dataclass
 class Conditionals:
-    """
-    Conditionals for T3 and S3Gen
-    - T3 conditionals:
-        - speaker_emb
-        - clap_emb
-        - cond_prompt_speech_tokens
-        - cond_prompt_speech_emb
-        - emotion_adv
-    - S3Gen conditionals:
-        - prompt_token
-        - prompt_token_len
-        - prompt_feat
-        - prompt_feat_len
-        - embedding
-    """
     t3: T3Cond
     gen: dict
 
@@ -116,7 +93,7 @@ class ChatterboxTTS:
         device: str,
         conds: Conditionals = None,
     ):
-        self.sr = S3GEN_SR  # sample rate of synthesized audio
+        self.sr = S3GEN_SR
         self.t3 = t3
         self.s3gen = s3gen
         self.ve = ve
@@ -129,7 +106,6 @@ class ChatterboxTTS:
     def from_local(cls, ckpt_dir, device) -> 'ChatterboxTTS':
         ckpt_dir = Path(ckpt_dir)
 
-        # Always load to CPU first for non-CUDA devices to handle CUDA-saved models
         if device in ["cpu", "mps"]:
             map_location = torch.device('cpu')
         else:
@@ -166,7 +142,6 @@ class ChatterboxTTS:
 
     @classmethod
     def from_pretrained(cls, device) -> 'ChatterboxTTS':
-        # Check if MPS is available on macOS
         if device == "mps" and not torch.backends.mps.is_available():
             if not torch.backends.mps.is_built():
                 print("MPS not available because the current PyTorch install was not built with MPS enabled.")
@@ -180,7 +155,6 @@ class ChatterboxTTS:
         return cls.from_local(Path(local_path).parent, device)
 
     def prepare_conditionals(self, wav_fpath, exaggeration=0.5):
-        ## Load reference wav
         s3gen_ref_wav, _sr = librosa.load(wav_fpath, sr=S3GEN_SR)
 
         ref_16k_wav = librosa.resample(s3gen_ref_wav, orig_sr=S3GEN_SR, target_sr=S3_SR)
@@ -188,13 +162,11 @@ class ChatterboxTTS:
         s3gen_ref_wav = s3gen_ref_wav[:self.DEC_COND_LEN]
         s3gen_ref_dict = self.s3gen.embed_ref(s3gen_ref_wav, S3GEN_SR, device=self.device)
 
-        # Speech cond prompt tokens
         if plen := self.t3.hp.speech_cond_prompt_len:
             s3_tokzr = self.s3gen.tokenizer
             t3_cond_prompt_tokens, _ = s3_tokzr.forward([ref_16k_wav[:self.ENC_COND_LEN]], max_len=plen)
             t3_cond_prompt_tokens = torch.atleast_2d(t3_cond_prompt_tokens).to(self.device)
 
-        # Voice-encoder speaker embedding
         ve_embed = torch.from_numpy(self.ve.embeds_from_wavs([ref_16k_wav], sample_rate=S3_SR))
         ve_embed = ve_embed.mean(axis=0, keepdim=True).to(self.device)
 
@@ -221,7 +193,6 @@ class ChatterboxTTS:
         else:
             assert self.conds is not None, "Please `prepare_conditionals` first or specify `audio_prompt_path`"
 
-        # Update exaggeration if needed
         if exaggeration != self.conds.t3.emotion_adv[0, 0, 0]:
             _cond: T3Cond = self.conds.t3
             self.conds.t3 = T3Cond(
@@ -230,12 +201,11 @@ class ChatterboxTTS:
                 emotion_adv=exaggeration * torch.ones(1, 1, 1),
             ).to(device=self.device)
 
-        # Norm and tokenize text
         text = punc_norm(text)
         text_tokens = self.tokenizer.text_to_tokens(text).to(self.device)
 
         if cfg_weight > 0.0:
-            text_tokens = torch.cat([text_tokens, text_tokens], dim=0)  # Need two seqs for CFG
+            text_tokens = torch.cat([text_tokens, text_tokens], dim=0)
 
         sot = self.t3.hp.start_text_token
         eot = self.t3.hp.stop_text_token
@@ -246,21 +216,17 @@ class ChatterboxTTS:
             speech_tokens = self.t3.inference(
                 t3_cond=self.conds.t3,
                 text_tokens=text_tokens,
-                max_new_tokens=2000,  # TODO: use the value in config
+                max_new_tokens=2000,
                 temperature=temperature,
                 cfg_weight=cfg_weight,
                 repetition_penalty=repetition_penalty,
                 min_p=min_p,
                 top_p=top_p,
             )
-            # Extract only the conditional batch.
+
             speech_tokens = speech_tokens[0]
-
-            # TODO: output becomes 1D
             speech_tokens = drop_invalid_tokens(speech_tokens)
-            
             speech_tokens = speech_tokens[speech_tokens < 6561]
-
             speech_tokens = speech_tokens.to(self.device)
 
             wav, _ = self.s3gen.inference(

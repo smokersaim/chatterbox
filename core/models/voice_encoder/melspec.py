@@ -13,7 +13,7 @@ def mel_basis(hp):
         n_fft=hp.n_fft,
         n_mels=hp.num_mels,
         fmin=hp.fmin,
-        fmax=hp.fmax)  # -> (nmel, nfreq)
+        fmax=hp.fmax)
 
 
 def preemphasis(wav, hp):
@@ -24,36 +24,28 @@ def preemphasis(wav, hp):
 
 
 def melspectrogram(wav, hp, pad=True):
-    # Run through pre-emphasis
     if hp.preemphasis > 0:
         wav = preemphasis(wav, hp)
         assert np.abs(wav).max() - 1 < 1e-07
 
-    # Do the stft
     spec_complex = _stft(wav, hp, pad=pad)
-
-    # Get the magnitudes
     spec_magnitudes = np.abs(spec_complex)
 
     if hp.mel_power != 1.0:
         spec_magnitudes **= hp.mel_power
 
-    # Get the mel and convert magnitudes->db
     mel = np.dot(mel_basis(hp), spec_magnitudes)
     if hp.mel_type == "db":
         mel = _amp_to_db(mel, hp)
 
-    # Normalise the mel from db to 0,1
     if hp.normalized_mels:
         mel = _normalize(mel, hp).astype(np.float32)
 
-    assert not pad or mel.shape[1] == 1 + len(wav) // hp.hop_size   # Sanity check
-    return mel   # (M, T)
+    assert not pad or mel.shape[1] == 1 + len(wav) // hp.hop_size
+    return mel 
 
 
 def _stft(y, hp, pad=True):
-    # NOTE: after 0.8, pad mode defaults to constant, setting this to reflect for
-    #   historical consistency and streaming-version consistency
     return librosa.stft(
         y,
         n_fft=hp.n_fft,

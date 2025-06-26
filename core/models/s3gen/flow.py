@@ -1,16 +1,3 @@
-# Copyright (c) 2024 Alibaba Inc (authors: Xiang Lyu, Zhihao Du)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 import logging
 import random
 from typing import Dict, Optional
@@ -87,21 +74,15 @@ class MaskedDiffWithXvec(torch.nn.Module):
         feat = batch['speech_feat'].to(device)
         feat_len = batch['speech_feat_len'].to(device)
         embedding = batch['embedding'].to(device)
-
-        # xvec projection
         embedding = F.normalize(embedding, dim=1)
         embedding = self.spk_embed_affine_layer(embedding)
-
-        # concat text and prompt_text
         mask = (~make_pad_mask(token_len)).float().unsqueeze(-1).to(device)
         token = self.input_embedding(torch.clamp(token, min=0)) * mask
 
-        # text encode
         h, h_lengths = self.encoder(token, token_len)
         h = self.encoder_proj(h)
         h, h_lengths = self.length_regulator(h, feat_len)
 
-        # get conditions
         conds = torch.zeros(feat.shape, device=token.device)
         for i, j in enumerate(feat_len):
             if random.random() < 0.5:
@@ -136,23 +117,20 @@ class MaskedDiffWithXvec(torch.nn.Module):
             embedding = embedding.half()
 
         assert token.shape[0] == 1
-        # xvec projection
+
         embedding = F.normalize(embedding, dim=1)
         embedding = self.spk_embed_affine_layer(embedding)
 
-        # concat text and prompt_text
         token_len1, token_len2 = prompt_token.shape[1], token.shape[1]
         token, token_len = torch.concat([prompt_token, token], dim=1), prompt_token_len + token_len
         mask = (~make_pad_mask(token_len)).unsqueeze(-1).to(embedding)
         token = self.input_embedding(torch.clamp(token, min=0)) * mask
 
-        # text encode
         h, h_lengths = self.encoder(token, token_len)
         h = self.encoder_proj(h)
         mel_len1, mel_len2 = prompt_feat.shape[1], int(token_len2 / self.input_frame_rate * 22050 / 256)
         h, h_lengths = self.length_regulator.inference(h[:, :token_len1], h[:, token_len1:], mel_len1, mel_len2, self.input_frame_rate)
 
-        # get conditions
         conds = torch.zeros([1, mel_len1 + mel_len2, self.output_size], device=token.device).to(h.dtype)
         conds[:, :mel_len1] = prompt_feat
         conds = conds.transpose(1, 2)
@@ -230,7 +208,6 @@ class CausalMaskedDiffWithXvec(torch.nn.Module):
         self.token_mel_ratio = token_mel_ratio
         self.pre_lookahead_len = pre_lookahead_len
 
-        # FIXME: this was missing - just putting it in as false
         self.fp16 = False
 
     @torch.inference_mode()
@@ -248,23 +225,20 @@ class CausalMaskedDiffWithXvec(torch.nn.Module):
             embedding = embedding.half()
 
         assert token.shape[0] == 1
-        # xvec projection
+
         embedding = F.normalize(embedding, dim=1)
         embedding = self.spk_embed_affine_layer(embedding)
 
-        # concat text and prompt_text
         token, token_len = torch.concat([prompt_token, token], dim=1), prompt_token_len + token_len
         mask = (~make_pad_mask(token_len)).unsqueeze(-1).to(embedding)
         token = self.input_embedding(torch.clamp(token, min=0)) * mask
 
-        # text encode
         h, h_lengths = self.encoder(token, token_len)
         if finalize is False:
             h = h[:, :-self.pre_lookahead_len * self.token_mel_ratio]
         mel_len1, mel_len2 = prompt_feat.shape[1], h.shape[1] - prompt_feat.shape[1]
         h = self.encoder_proj(h)
 
-        # get conditions
         conds = torch.zeros([1, mel_len1 + mel_len2, self.output_size], device=token.device).to(h.dtype)
         conds[:, :mel_len1] = prompt_feat
         conds = conds.transpose(1, 2)
@@ -279,4 +253,4 @@ class CausalMaskedDiffWithXvec(torch.nn.Module):
         )
         feat = feat[:, :, mel_len1:]
         assert feat.shape[2] == mel_len2
-        return feat.float(), None  # NOTE jrm: why are they returning None here?
+        return feat.float(), None 

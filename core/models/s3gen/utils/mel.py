@@ -1,10 +1,8 @@
-"""mel-spectrogram extraction in Matcha-TTS"""
 from librosa.filters import mel as librosa_mel_fn
 import torch
 import numpy as np
 
 
-# NOTE: they decalred these global vars
 mel_basis = {}
 hann_window = {}
 
@@ -17,24 +15,8 @@ def spectral_normalize_torch(magnitudes):
     output = dynamic_range_compression_torch(magnitudes)
     return output
 
-"""
-feat_extractor: !name:matcha.utils.audio.mel_spectrogram
-    n_fft: 1920
-    num_mels: 80
-    sampling_rate: 24000
-    hop_size: 480
-    win_size: 1920
-    fmin: 0
-    fmax: 8000
-    center: False
-
-"""
-
 def mel_spectrogram(y, n_fft=1920, num_mels=80, sampling_rate=24000, hop_size=480, win_size=1920,
                     fmin=0, fmax=8000, center=False):
-    """Copied from https://github.com/shivammehta25/Matcha-TTS/blob/main/matcha/utils/audio.py
-    Set default values according to Cosyvoice's config.
-    """
 
     if isinstance(y, np.ndarray):
         y = torch.tensor(y).float()
@@ -47,7 +29,7 @@ def mel_spectrogram(y, n_fft=1920, num_mels=80, sampling_rate=24000, hop_size=48
     if torch.max(y) > 1.0:
         print("max value is ", torch.max(y))
 
-    global mel_basis, hann_window  # pylint: disable=global-statement,global-variable-not-assigned
+    global mel_basis, hann_window 
     if f"{str(fmax)}_{str(y.device)}" not in mel_basis:
         mel = librosa_mel_fn(sr=sampling_rate, n_fft=n_fft, n_mels=num_mels, fmin=fmin, fmax=fmax)
         mel_basis[str(fmax) + "_" + str(y.device)] = torch.from_numpy(mel).float().to(y.device)

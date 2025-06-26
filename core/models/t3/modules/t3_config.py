@@ -16,7 +16,6 @@ class T3Config:
     input_pos_emb = "learned"
     speech_cond_prompt_len = 150
 
-    # For T3CondEnc
     encoder_type = "voice_encoder"
     speaker_embed_size = 256
     use_perceiver_resampler = True
