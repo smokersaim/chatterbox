@@ -12,9 +12,9 @@ from s3tokenizer.model_v2 import (
 )
 
 from .configs import (
-    SOS, EOS, S3_SR, S3_HOP,
-    S3_TOKEN_HOP, S3_TOKEN_RATE,
-    SPEECH_VOCAB_SIZE, SPEECH_TOKENIZER_MODEL
+    SOT, EOT, UNK, SPACE,
+    S3_SR, S3_HOP, S3_TOKEN_RATE, 
+    SPEECH_TOKENIZER_MODEL
 )
 
 class BaseTokenizer:
