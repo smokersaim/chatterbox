@@ -11,17 +11,19 @@ from s3tokenizer.model_v2 import (
     ModelConfig,
 )
 
-S3_SR = 16_000
-S3_HOP = 160
-S3_TOKEN_HOP = 640
-S3_TOKEN_RATE = 25
-SPEECH_VOCAB_SIZE = 6561
-
-SOT = "[START]"
-EOT = "[STOP]"
-UNK = "[UNK]"
-SPACE = "[SPACE]"
-SPECIAL_TOKENS = [SOT, EOT, UNK, SPACE, "[PAD]", "[SEP]", "[CLS]", "[MASK]"]
+from .configs import (
+   S3_SR,
+   S3_HOP,
+   S3_TOKEN_HOP,
+   S3_TOKEN_RATE,
+   SPEECH_VOCAB_SIZE,
+   SPEECH_TOKENIZER,
+   SOT,
+   EOT,
+   UNK,
+   SPACE,
+   SPECIAL_TOKENS
+)
 
 class EnTokenizer:
     def __init__(self, vocab_file_path):
@@ -65,7 +67,7 @@ class S3Tokenizer(S3TokenizerV2):
 
     def __init__(
         self,
-        name: str="speech_tokenizer_v2_25hz",
+        name: str=SPEECH_TOKENIZER,
         config: ModelConfig = ModelConfig()
     ):
         super().__init__(name)
