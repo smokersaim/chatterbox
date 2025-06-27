@@ -6,7 +6,7 @@ import torchaudio as ta
 from functools import lru_cache
 from typing import Optional
 
-from ..tokenizer import S3_SR, SPEECH_VOCAB_SIZE, S3Tokenizer
+from ..tokenizer import S3_SR, SPEECH_VOCAB_SIZE, SPEECH_TOKENIZER_MODEL, SpeechTokenizer
 from .const import S3GEN_SR
 from .flow import CausalMaskedDiffWithXvec
 from .xvector import CAMPPlus
@@ -29,15 +29,10 @@ def get_resampler(src_sr, dst_sr, device):
     return ta.transforms.Resample(src_sr, dst_sr).to(device)
 
 
-class S3Token2Mel(torch.nn.Module):
-    """
-    CosyVoice2's CFM decoder maps S3 speech tokens to mel-spectrograms.
-
-    TODO: make these modules configurable?
-    """
+class SpeechTokenToMel(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        self.tokenizer = S3Tokenizer("speech_tokenizer_v2_25hz")
+        self.tokenizer = SpeechTokenizer(SPEECH_TOKENIZER_MODEL)
         self.mel_extractor = mel_spectrogram
         self.speaker_encoder = CAMPPlus()
 
@@ -167,7 +162,7 @@ class S3Token2Mel(torch.nn.Module):
         return output_mels
 
 
-class S3Token2Wav(S3Token2Mel):
+class S3Token2Wav(SpeechTokenToMel):
     def __init__(self):
         super().__init__()
 

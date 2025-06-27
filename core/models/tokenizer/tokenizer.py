@@ -12,20 +12,12 @@ from s3tokenizer.model_v2 import (
 )
 
 from .configs import (
-   S3_SR,
-   S3_HOP,
-   S3_TOKEN_HOP,
-   S3_TOKEN_RATE,
-   SPEECH_VOCAB_SIZE,
-   SPEECH_TOKENIZER,
-   SOT,
-   EOT,
-   UNK,
-   SPACE,
-   SPECIAL_TOKENS
+    SOS, EOS, S3_SR, S3_HOP,
+    S3_TOKEN_HOP, S3_TOKEN_RATE,
+    SPEECH_VOCAB_SIZE, SPEECH_TOKENIZER_MODEL
 )
 
-class EnTokenizer:
+class BaseTokenizer:
     def __init__(self, vocab_file_path):
         self.tokenizer: Tokenizer = Tokenizer.from_file(vocab_file_path)
         self.check_vocabset_sot_eot()
@@ -40,10 +32,7 @@ class EnTokenizer:
         text_tokens = torch.IntTensor(text_tokens).unsqueeze(0)
         return text_tokens
 
-    def encode( self, txt: str, verbose=False):
-        """
-        clean_text > (append `lang_id`) > replace SPACE > encode text using Tokenizer
-        """
+    def encode(self, txt: str, verbose=False):
         txt = txt.replace(' ', SPACE)
         code = self.tokenizer.encode(txt)
         ids = code.ids
@@ -53,8 +42,7 @@ class EnTokenizer:
         if isinstance(seq, torch.Tensor):
             seq = seq.cpu().numpy()
 
-        txt: str = self.tokenizer.decode(seq,
-        skip_special_tokens=False)
+        txt: str = self.tokenizer.decode(seq, skip_special_tokens=False)
         txt = txt.replace(' ', '')
         txt = txt.replace(SPACE, ' ')
         txt = txt.replace(EOT, '')
@@ -62,13 +50,13 @@ class EnTokenizer:
         return txt
 
 
-class S3Tokenizer(S3TokenizerV2):
+class SpeechTokenizer(S3TokenizerV2):
     ignore_state_dict_missing = ("_mel_filters", "window")
 
     def __init__(
         self,
-        name: str=SPEECH_TOKENIZER,
-        config: ModelConfig = ModelConfig()
+        name: str = SPEECH_TOKENIZER_MODEL,
+        config: ModelConfig = ModelConfig(),
     ):
         super().__init__(name)
 
@@ -76,17 +64,10 @@ class S3Tokenizer(S3TokenizerV2):
         _mel_filters = librosa.filters.mel(
             sr=S3_SR,
             n_fft=self.n_fft,
-            n_mels=config.n_mels
+            n_mels=config.n_mels,
         )
-        self.register_buffer(
-            "_mel_filters",
-            torch.FloatTensor(_mel_filters),
-        )
-
-        self.register_buffer(
-            "window",
-            torch.hann_window(self.n_fft),
-        )
+        self.register_buffer("_mel_filters", torch.FloatTensor(_mel_filters))
+        self.register_buffer("window", torch.hann_window(self.n_fft))
 
     def pad(self, wavs, sr) -> List[torch.Tensor]:
         processed_wavs = []
@@ -98,14 +79,8 @@ class S3Tokenizer(S3TokenizerV2):
 
             n_tokens = (wav.shape[1] / sr) * S3_TOKEN_RATE
             n_tokens = np.ceil(n_tokens)
-            intended_wav_len = n_tokens * (sr / S3_TOKEN_RATE)
-            intended_wav_len = int(intended_wav_len)
-            wav = torch.nn.functional.pad(
-                wav,
-                (0, intended_wav_len - wav.shape[-1]),
-                mode="constant",
-                value=0
-            )
+            intended_wav_len = int(n_tokens * (sr / S3_TOKEN_RATE))
+            wav = F.pad(wav, (0, intended_wav_len - wav.shape[-1]), mode="constant", value=0)
             processed_wavs.append(wav)
         return processed_wavs
 
@@ -116,7 +91,6 @@ class S3Tokenizer(S3TokenizerV2):
                 wav = torch.from_numpy(wav)
             if wav.dim() == 1:
                 wav = wav.unsqueeze(0)
-
             processed_wavs.append(wav)
         return processed_wavs
 
@@ -124,11 +98,12 @@ class S3Tokenizer(S3TokenizerV2):
     def forward(
         self,
         wavs: torch.Tensor,
-        accelerator: 'Accelerator'=None,
-        max_len: int=None,
+        accelerator: 'Accelerator' = None,
+        max_len: int = None,
     ) -> Tuple[torch.Tensor, torch.LongTensor]:
         processed_wavs = self._prepare_audio(wavs)
         mels, mel_lens = [], []
+
         for wav in processed_wavs:
             wav = wav.to(self.device)
             mel = self.log_mel_spectrogram(wav)
@@ -137,38 +112,32 @@ class S3Tokenizer(S3TokenizerV2):
             mels.append(mel.squeeze(0))
 
         mels, mel_lens = padding(mels)
-        if accelerator is None:
-            tokenizer = self
-        else:
-            tokenizer = accelerator.unwrap_model(self)
 
+        tokenizer = self if accelerator is None else accelerator.unwrap_model(self)
         speech_tokens, speech_token_lens = tokenizer.quantize(mels, mel_lens.to(self.device))
-        return (
-            speech_tokens.long().detach(),
-            speech_token_lens.long().detach(),
-        )
 
-    def log_mel_spectrogram(
-        self,
-        audio: torch.Tensor,
-        padding: int = 0,
-    ):
+        return speech_tokens.long().detach(), speech_token_lens.long().detach()
+
+    def log_mel_spectrogram(self, audio: torch.Tensor, padding: int = 0):
         if not torch.is_tensor(audio):
             audio = torch.from_numpy(audio)
 
         audio = audio.to(self.device)
         if padding > 0:
             audio = F.pad(audio, (0, padding))
-        stft = torch.stft(
-            audio, self.n_fft, S3_HOP,
-            window=self.window.to(self.device),
-            return_complex=True
-        )
-        magnitudes = stft[..., :-1].abs()**2
 
+        stft = torch.stft(
+            audio,
+            self.n_fft,
+            S3_HOP,
+            window=self.window.to(self.device),
+            return_complex=True,
+        )
+        magnitudes = stft[..., :-1].abs() ** 2
         mel_spec = self._mel_filters.to(self.device) @ magnitudes
 
         log_spec = torch.clamp(mel_spec, min=1e-10).log10()
         log_spec = torch.maximum(log_spec, log_spec.max() - 8.0)
         log_spec = (log_spec + 4.0) / 4.0
+
         return log_spec
