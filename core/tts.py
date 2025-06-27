@@ -9,9 +9,8 @@ from huggingface_hub import hf_hub_download
 from safetensors.torch import load_file
 
 from .models.t3 import T3
-from .models.s3tokenizer import S3_SR, drop_invalid_tokens
 from .models.s3gen import S3GEN_SR, S3Gen
-from .models.tokenizers import EnTokenizer
+from .models.tokenizer import EnTokenizer, S3_SR, drop_invalid_tokens
 from .models.voice_encoder import VoiceEncoder
 from .models.t3.modules.cond_enc import T3Cond
 
