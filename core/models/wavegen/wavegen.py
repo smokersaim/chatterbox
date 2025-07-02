@@ -7,16 +7,15 @@ from functools import lru_cache
 from typing import Optional
 
 from ..tokenizer import S3_SR, SPEECH_VOCAB_SIZE, SPEECH_TOKENIZER_MODEL, SpeechTokenizer
-from .const import S3GEN_SR
-from .flow import CausalMaskedDiffWithXvec
-from .xvector import CAMPPlus
-from .utils.mel import mel_spectrogram
-from .f0_predictor import ConvRNNF0Predictor
-from .hifigan import HiFTGenerator
-from .transformer.upsample_encoder import UpsampleConformerEncoder
-from .flow_matching import CausalConditionalCFM
-from .decoder import ConditionalDecoder
-from .configs import CFM_PARAMS
+from .modules.flow import CausalMaskedDiffWithXvec
+from .modules.xvector import CAMPPlus
+from .utilities.mel import mel_spectrogram
+from .modules.f0_predictor import ConvRNNF0Predictor
+from .modules.hifigan import HiFTGenerator
+from .transformers.upsample_encoder import UpsampleConformerEncoder
+from .modules.flow_matching import CausalConditionalCFM
+from .modules.decoder import ConditionalDecoder
+from .configs import S3GEN_SR, CFM_PARAMS
 
 
 def drop_invalid_tokens(x):
@@ -29,7 +28,7 @@ def get_resampler(src_sr, dst_sr, device):
     return ta.transforms.Resample(src_sr, dst_sr).to(device)
 
 
-class SpeechTokenToMel(torch.nn.Module):
+class SpeechTokensToMel(torch.nn.Module):
     def __init__(self):
         super().__init__()
         self.tokenizer = SpeechTokenizer(SPEECH_TOKENIZER_MODEL)
@@ -162,7 +161,7 @@ class SpeechTokenToMel(torch.nn.Module):
         return output_mels
 
 
-class S3Token2Wav(SpeechTokenToMel):
+class SpeechTokensToWav(SpeechTokensToMel):
     def __init__(self):
         super().__init__()
 

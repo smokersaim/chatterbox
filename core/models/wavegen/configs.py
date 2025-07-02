@@ -1,5 +1,7 @@
 from ..utils import AttrDict
 
+S3GEN_SR = 24000
+
 CFM_PARAMS = AttrDict({
     "sigma_min": 1e-06,
     "solver": "euler",

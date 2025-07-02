@@ -7,14 +7,14 @@ from torch.nn import functional as F
 from .convolution import ConvolutionModule
 from .encoder_layer import ConformerEncoderLayer
 from .positionwise_feed_forward import PositionwiseFeedForward
-from ..utils.class_utils import (
+from ..utilities.class_utils import (
     COSYVOICE_EMB_CLASSES,
     COSYVOICE_SUBSAMPLE_CLASSES,
     COSYVOICE_ATTENTION_CLASSES,
     COSYVOICE_ACTIVATION_CLASSES,
 )
-from ..utils.mask import make_pad_mask
-from ..utils.mask import add_optional_chunk_mask
+from ..utilities.mask import make_pad_mask
+from ..utilities.mask import add_optional_chunk_mask
 
 
 class Upsample1D(nn.Module):

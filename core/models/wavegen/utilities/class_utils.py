@@ -1,7 +1,7 @@
 import torch
 
-from ..transformer.activation import Swish
-from ..transformer.subsampling import (
+from ..transformers.activation import Swish
+from ..transformers.subsampling import (
     LinearNoSubsampling,
     EmbedinigNoSubsampling,
     Conv1dSubsampling2,
@@ -9,16 +9,16 @@ from ..transformer.subsampling import (
     Conv2dSubsampling6,
     Conv2dSubsampling8,
 )
-from ..transformer.embedding import (
+from ..transformers.embedding import (
     PositionalEncoding,
     RelPositionalEncoding,
     WhisperPositionalEncoding,
     LearnablePositionalEncoding,
     NoPositionalEncoding)
-from ..transformer.attention import (MultiHeadedAttention,
+from ..transformers.attention import (MultiHeadedAttention,
     RelPositionMultiHeadedAttention)
-from ..transformer.embedding import EspnetRelPositionalEncoding
-from ..transformer.subsampling import LegacyLinearNoSubsampling
+from ..transformers.embedding import EspnetRelPositionalEncoding
+from ..transformers.subsampling import LegacyLinearNoSubsampling
 
 
 COSYVOICE_ACTIVATION_CLASSES = {

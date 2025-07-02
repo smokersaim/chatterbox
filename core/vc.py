@@ -7,7 +7,7 @@ from huggingface_hub import hf_hub_download
 from safetensors.torch import load_file
 
 from .models.tokenizer import S3_SR
-from .models.s3gen import S3GEN_SR, S3Gen
+from .models.wavegen import S3GEN_SR, WaveGen
 
 
 REPO_ID = "ResembleAI/chatterbox"
@@ -19,7 +19,7 @@ class ChatterboxVC:
 
     def __init__(
         self,
-        s3gen: S3Gen,
+        s3gen: WaveGen,
         device: str,
         ref_dict: dict=None,
     ):
@@ -49,7 +49,7 @@ class ChatterboxVC:
             states = torch.load(builtin_voice, map_location=map_location)
             ref_dict = states['gen']
 
-        s3gen = S3Gen()
+        s3gen = WaveGen()
         s3gen.load_state_dict(
             load_file(ckpt_dir / "s3gen.safetensors"), strict=False
         )

@@ -1,8 +1,8 @@
 import threading
 import torch
 import torch.nn.functional as F
-from .matcha.flow_matching import BASECFM
-from .configs import CFM_PARAMS
+from ..components.flow_matching import BASECFM
+from ..configs import CFM_PARAMS
 
 
 class ConditionalCFM(BASECFM):

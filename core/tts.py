@@ -9,7 +9,7 @@ from huggingface_hub import hf_hub_download
 from safetensors.torch import load_file
 
 from .models.t3 import T3
-from .models.s3gen import S3GEN_SR, S3Gen
+from .models.wavegen import S3GEN_SR, WaveGen
 from .models.tokenizer import BaseTokenizer, S3_SR, drop_invalid_tokens
 from .models.voice_encoder import VoiceEncoder
 from .models.t3.modules.cond_enc import T3Cond
@@ -86,7 +86,7 @@ class ChatterboxTTS:
     def __init__(
         self,
         t3: T3,
-        s3gen: S3Gen,
+        s3gen: WaveGen,
         ve: VoiceEncoder,
         tokenizer: BaseTokenizer,
         device: str,
@@ -123,7 +123,7 @@ class ChatterboxTTS:
         t3.load_state_dict(t3_state)
         t3.to(device).eval()
 
-        s3gen = S3Gen()
+        s3gen = WaveGen()
         s3gen.load_state_dict(
             load_file(ckpt_dir / "s3gen.safetensors"), strict=False
         )

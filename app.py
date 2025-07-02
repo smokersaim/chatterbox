@@ -167,4 +167,4 @@ with gr.Blocks(
     )
 
 demo.queue(max_size=5)
-demo.launch(share=True, inbrowser=True)
+demo.launch(inbrowser=True)

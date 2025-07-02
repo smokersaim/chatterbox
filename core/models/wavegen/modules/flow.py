@@ -4,8 +4,8 @@ from typing import Dict, Optional
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-from .utils.mask import make_pad_mask
-from .configs import CFM_PARAMS
+from ..utilities.mask import make_pad_mask
+from ..configs import CFM_PARAMS
 
 
 class MaskedDiffWithXvec(torch.nn.Module):
