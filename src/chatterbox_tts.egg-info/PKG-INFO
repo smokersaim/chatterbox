@@ -1,0 +1,15 @@
+Metadata-Version: 2.4
+Name: chatterbox-tts
+Version: 0.1.4
+Summary: Chatterbox: Open Source TTS and Voice Conversion by Resemble AI
+Requires-Python: >=3.10
+Requires-Dist: numpy<1.26.0,>=1.24.0
+Requires-Dist: librosa==0.11.0
+Requires-Dist: s3tokenizer
+Requires-Dist: torch==2.6.0
+Requires-Dist: torchaudio==2.6.0
+Requires-Dist: transformers==4.46.3
+Requires-Dist: diffusers==0.29.0
+Requires-Dist: resemble-perth==1.0.1
+Requires-Dist: conformer==0.3.2
+Requires-Dist: safetensors==0.5.3
